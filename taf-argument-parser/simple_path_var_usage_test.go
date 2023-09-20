@@ -1,8 +1,9 @@
 package main
 
 import (
-	"tafexpr/variablecontext"
 	"testing"
+
+	"github.com/tafexpr/variablecontext"
 
 	"github.com/stretchr/testify/assert"
 )

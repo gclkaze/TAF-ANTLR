@@ -5,8 +5,9 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"tafexpr/parser"
-	"tafexpr/variablecontext"
+
+	"github.com/tafexpr/parser"
+	"github.com/tafexpr/variablecontext"
 
 	log "github.com/sirupsen/logrus"
 )
