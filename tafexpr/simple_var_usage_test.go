@@ -1,9 +1,9 @@
-package main
+package tafexpr
 
 import (
 	"testing"
 
-	"github.com/gclkaze/tafexpr/variablecontext"
+	"github.com/gclkaze/tafexpr/tafexpr/variablecontext"
 
 	"github.com/stretchr/testify/assert"
 )

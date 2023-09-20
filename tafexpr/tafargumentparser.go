@@ -1,8 +1,8 @@
-package main
+package tafexpr
 
 import (
-	"github.com/gclkaze/tafexpr/parser"
-	"github.com/gclkaze/tafexpr/variablecontext"
+	"github.com/gclkaze/tafexpr/tafexpr/parser"
+	"github.com/gclkaze/tafexpr/tafexpr/variablecontext"
 
 	"github.com/antlr4-go/antlr/v4"
 	log "github.com/sirupsen/logrus"

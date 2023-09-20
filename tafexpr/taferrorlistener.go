@@ -1,4 +1,4 @@
-package main
+package tafexpr
 
 import "github.com/antlr4-go/antlr/v4"
 

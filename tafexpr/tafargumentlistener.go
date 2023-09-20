@@ -1,4 +1,4 @@
-package main
+package tafexpr
 
 import (
 	"fmt"
@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gclkaze/tafexpr/parser"
-	"github.com/gclkaze/tafexpr/variablecontext"
-
+	"github.com/gclkaze/tafexpr/tafexpr/parser"
+	"github.com/gclkaze/tafexpr/tafexpr/variablecontext"
 	log "github.com/sirupsen/logrus"
 )
 
