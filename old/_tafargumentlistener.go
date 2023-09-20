@@ -30,13 +30,8 @@ type TAFArgumentListener struct {
 
 func (l *TAFArgumentListener) push(i float64) {
 	l.stack = append(l.stack, i)
-	//log.Println("pushed ", l.stack)
+	log.Println("pushed ", l.stack)
 
-	l.IsFloat = !isIntegral(i)
-}
-
-func isIntegral(val float64) bool {
-	return val == float64(int(val))
 }
 
 func (l *TAFArgumentListener) pop() any {
@@ -52,11 +47,23 @@ func (l *TAFArgumentListener) pop() any {
 
 	// Remove the last element from the stack.
 	l.stack = l.stack[:len(l.stack)-1]
-	//log.Println("popped ", l.stack)
+	log.Println("popped ", l.stack)
 	if l.IsFloat {
 		return result
 	}
 	return int(result)
+}
+
+func (l *TAFArgumentListener) replaceLast(i float64) {
+
+	if l.OnError {
+		return
+	}
+	if len(l.stack) < 1 {
+		panic("stack is empty unable to pop")
+	}
+	// Get the last value from the stack.
+	l.stack[len(l.stack)-1] = i
 }
 
 func (l *TAFArgumentListener) popFloat() float64 {
@@ -84,6 +91,7 @@ func (l *TAFArgumentListener) popFloat() float64 {
 }
 
 func (l *TAFArgumentListener) ExitMulDiv(c *parser.MulDivContext) {
+	log.Println("ExitMulDiv" + c.GetText())
 	right, left := l.pop(), l.pop()
 
 	if l.IsFloat {
@@ -133,8 +141,11 @@ func (l *TAFArgumentListener) ExitMulDiv(c *parser.MulDivContext) {
 }
 
 func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
+	log.Println("ExitAddSub " + c.GetText())
 	right := l.pop()
+	log.Println(right)
 	left := l.pop()
+	log.Println(left)
 
 	if l.IsFloat {
 		rightFloat := right.(float64)
@@ -176,6 +187,7 @@ func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
 }
 
 func (l *TAFArgumentListener) ExitNumber(c *parser.NumberContext) {
+	fmt.Printf("ExitNumber: %v\n", c.GetText())
 	i, err := strconv.Atoi(c.GetText())
 	if err != nil {
 		panic(err.Error())
@@ -197,24 +209,27 @@ func (l *TAFArgumentListener) ExitDoubleValue(c *parser.DoubleValueContext) {
 	l.push(i)
 }
 
+// EnterTaf_expression is called when entering the taf_expression production.
 func (l *TAFArgumentListener) EnterTaf_expression(c *parser.Taf_expressionContext) {
-
+	//log.Println("EnterTaf_expression")
 }
 
 func (l *TAFArgumentListener) ExitTaf_expression(c *parser.Taf_expressionContext) {
 	log.Println("ExitTaf_expression" + c.GetText())
 	l.Index.Clear()
+
 }
 
+// ExitNumberValue is called when exiting the NumberValue production.
 func (l *TAFArgumentListener) ExitNumberValue(c *parser.NumberContext) {
 	log.Println("ExitNumberValue " + c.GetText())
+	log.Println(c.GetText())
 }
 
 func (l *TAFArgumentListener) EnterVar_expression(c *parser.Var_expressionContext) {
-	varExpression := c.GetText()
-	log.Println("EnterVar_expression " + varExpression)
-
-	l.Index.SetExpression(varExpression)
+	//l.pop()
+	log.Println("EnterVar_expression " + c.GetText())
+	//	l.CurrentPath = c.GetText()
 }
 
 func (l *TAFArgumentListener) EnterHandleVarExpression(c *parser.HandleVarExpressionContext) {
@@ -233,6 +248,7 @@ func (l *TAFArgumentListener) ExitHandleVarExpression(c *parser.HandleVarExpress
 		//we need to store index value to the stack
 		log.Println("==============================================OUT OF SCOPE for ==>" + c.GetText())
 		fmt.Printf("l.stack: %v\n", l.stack)
+		//l.push(float64(l.Index.Value))
 		l.Index.Clear()
 
 		return
@@ -266,43 +282,42 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 		l.push(v)
 		return
 	}
-	varName := c.VARIABLE_NAME().GetText()
-	if l.Scope > 1 {
-		ex := c.GetText()
-		//we have a subexpression and its value, we need to push that
-		fmt.Printf("l.stack: %v\n", l.stack)
-		path := l.ExtractPath(ex, varName)
-		if ex == varName {
-			v := l.VariableContext.GetVariableIntValue(varName)
-			l.Index.Push(ex, int(v))
+
+	myVarName := c.VARIABLE_NAME().GetText()
+	if l.Index.IsEmpty() {
+		myVarName := c.VARIABLE_NAME().GetText()
+		exP := l.ExtractPath(l.CurrentPath, myVarName)
+		if exP == myVarName {
+			v := l.VariableContext.GetVariableIntValue(exP)
 			l.push(v)
+			l.Index.Save(exP, int(v), -1, l.CurrentPath)
 			return
 		}
 
-		evalExpr := l.Index.EvalExpr(ex)
-		path = l.ExtractPath(evalExpr, varName)
-		if ex == varName {
-			v := l.VariableContext.GetVariableIntValue(varName)
-			l.Index.Push(ex, int(v))
-			l.push(v)
-			return
-		}
-
-		v := l.VariableContext.EvaluateJSONVariableIntValue(varName, path)
-		l.Index.Push(ex, int(v))
+		v := l.VariableContext.EvaluateJSONVariableIntValue(myVarName, exP)
+		pos := c.GetStart().GetColumn()
+		l.Index.Save(c.GetText(), int(v), pos, l.CurrentPath)
+		//l.pop()
 		l.push(v)
+		//panic(123)
 		return
 	}
 
-	expr := l.Index.Eval()
-	if expr == varName {
-		v := l.VariableContext.GetVariableIntValue(varName)
-		l.push(v)
-		return
-	}
+	p := ""
+	p = c.GetText()
+	oldP := p
+	log.Println("Before ", p)
 
-	path := l.ExtractPath(expr, varName)
-	v := l.VariableContext.EvaluateJSONVariableIntValue(varName, path)
+	l.Index.Eval(&p)
+	log.Println("After ", p)
+	exP := l.ExtractPath(p, myVarName)
+
+	fmt.Printf("c.VARIABLE_NAME().GetText(): %v\n", myVarName)
+
+	v := l.VariableContext.EvaluateJSONVariableIntValue(myVarName, exP)
+	pos := c.GetStart().GetColumn()
+	l.Index.Save(oldP, int(v), pos, l.CurrentPath)
+
 	l.push(v)
 	return
 }
@@ -314,11 +329,14 @@ func (l *TAFArgumentListener) EnterIndexExpression(c *parser.IndexExpressionCont
 
 func (l *TAFArgumentListener) ExitIndexExpression(c *parser.IndexExpressionContext) {
 	log.Println(l.Scope, " Exit Index Expression ")
+	log.Printf("c.GetText(): %v\n", c.GetText())
+	log.Printf("l.Index.IsEmpty(): %v\n", l.Index.IsEmpty())
+
 	p := c.GetText()
 
 	index := l.pop()
-	l.Index.Push(p, index.(int))
-
+	l.Index.Save(p, index.(int), 1, l.CurrentPath)
+	l.Index.Eval(&l.CurrentPath)
 	if l.Scope == 1 {
 		//l.Index.Clear()
 	}

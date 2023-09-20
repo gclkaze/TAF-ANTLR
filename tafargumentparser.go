@@ -31,20 +31,7 @@ func (ap *TAFArgumentParser) Parse(arg string) bool {
 	lexer.RemoveErrorListeners()
 	lexer.AddErrorListener(lexerErrors)
 
-	/*	for {
-		t := lexer.NextToken()
-		if t.GetTokenType() == antlr.TokenEOF {
-			break
-		}
-		if len(lexerErrors.Errors) != 0 {
-			return false
-		}
-		fmt.Printf("t: %v\n", t)
-		ap.tokens = append(ap.tokens, t)
-	}*/
-
 	ap.symbolicNames = lexer.SymbolicNames
-
 	if len(lexerErrors.Errors) != 0 {
 		log.Printf("Lexer %d errors found\n", len(lexerErrors.Errors))
 		for _, e := range lexerErrors.Errors {
