@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/tafexpr/variablecontext"
+	"github.com/gclkaze/tafexpr/variablecontext"
 
 	"github.com/stretchr/testify/assert"
 )

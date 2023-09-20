@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tafexpr/parser"
-	"github.com/tafexpr/variablecontext"
+	"github.com/gclkaze/tafexpr/parser"
+	"github.com/gclkaze/tafexpr/variablecontext"
 
 	log "github.com/sirupsen/logrus"
 )
