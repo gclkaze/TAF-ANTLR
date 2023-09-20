@@ -18,6 +18,8 @@ type TAFArgumentParser struct {
 
 	lexerErrors  *TAFArgumentErrorListener
 	parserErrors *TAFArgumentErrorListener
+
+	Debug bool
 }
 
 func (ap *TAFArgumentParser) clearErrors() {
@@ -57,7 +59,7 @@ func (ap *TAFArgumentParser) CanParse(arg string) bool {
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	// Create the Parser
 	p := parser.NewTafexprParser(stream)
-	l := &TAFArgumentListener{VariableContext: ap.VariableContext}
+	l := &TAFArgumentListener{VariableContext: ap.VariableContext, Debug: ap.Debug}
 
 	ap.parserErrors = &TAFArgumentErrorListener{}
 	p.RemoveErrorListeners()
@@ -111,7 +113,7 @@ func (ap *TAFArgumentParser) Parse(arg string) bool {
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	// Create the Parser
 	p := parser.NewTafexprParser(stream)
-	l := &TAFArgumentListener{VariableContext: ap.VariableContext}
+	l := &TAFArgumentListener{VariableContext: ap.VariableContext, Debug: ap.Debug}
 
 	ap.parserErrors = &TAFArgumentErrorListener{}
 	p.RemoveErrorListeners()

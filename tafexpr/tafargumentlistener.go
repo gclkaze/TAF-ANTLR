@@ -27,6 +27,7 @@ type TAFArgumentListener struct {
 	CurrentPath     string
 	Scope           int
 	Index           IndexStack
+	Debug           bool
 }
 
 func (l *TAFArgumentListener) push(i float64) {
@@ -48,7 +49,14 @@ func (l *TAFArgumentListener) pop() any {
 		return -1
 	}
 	if len(l.stack) < 1 {
-		panic("stack is empty unable to pop")
+		if l.Debug {
+			panic("stack is empty unable to pop")
+
+		} else {
+			log.Error("stack is empty unable to pop")
+			l.OnError = true
+			return -1
+		}
 	}
 	// Get the last value from the stack.
 	result := l.stack[len(l.stack)-1]
@@ -68,10 +76,23 @@ func (l *TAFArgumentListener) popFloat() float64 {
 	}
 
 	if !l.IsFloat {
-		panic("popFloat can be called only if the result is a FLOAT64 number.")
+		if l.Debug {
+			panic("popFloat can be called only if the result is a FLOAT64 number.")
+		} else {
+			log.Error("popFloat can be called only if the result is a FLOAT64 number.")
+			l.OnError = true
+			return -1
+		}
 	}
 	if len(l.stack) < 1 {
-		panic("stack is empty unable to pop")
+		if l.Debug {
+			panic("stack is empty unable to pop")
+		} else {
+			log.Error("stack is empty unable to pop")
+			l.OnError = true
+			return -1
+		}
+
 	}
 	// Get the last value from the stack.
 	result := l.stack[len(l.stack)-1]
@@ -106,7 +127,14 @@ func (l *TAFArgumentListener) ExitMulDiv(c *parser.MulDivContext) {
 			v := leftFloat / rightFloat
 			l.push(v)
 		default:
-			panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+			if l.Debug {
+				panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+			} else {
+				log.Error(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+				l.OnError = true
+				return
+			}
+			//panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
 		}
 
 	} else {
@@ -129,7 +157,13 @@ func (l *TAFArgumentListener) ExitMulDiv(c *parser.MulDivContext) {
 			l.push(float64(v))
 			break
 		default:
-			panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+			if l.Debug {
+				panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+			} else {
+				log.Error(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+				l.OnError = true
+				return
+			}
 		}
 	}
 
@@ -178,8 +212,15 @@ func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
 func (l *TAFArgumentListener) ExitNumber(c *parser.NumberContext) {
 	i, err := strconv.Atoi(c.GetText())
 	if err != nil {
-		log.Error(err.Error())
-		panic(err.Error())
+
+		if l.Debug {
+			log.Error(err.Error())
+			panic(err.Error())
+		} else {
+			log.Error(err.Error())
+			l.OnError = true
+			return
+		}
 	}
 
 	l.push(float64(i))
@@ -188,8 +229,15 @@ func (l *TAFArgumentListener) ExitNumber(c *parser.NumberContext) {
 func (l *TAFArgumentListener) ExitDoubleValue(c *parser.DoubleValueContext) {
 	i, err := strconv.ParseFloat(c.GetText(), -1)
 	if err != nil {
-		log.Error(err.Error())
-		panic(err.Error())
+
+		if l.Debug {
+			log.Error(err.Error())
+			panic(err.Error())
+		} else {
+			log.Error(err.Error())
+			l.OnError = true
+			return
+		}
 	}
 
 	l.IsFloat = true
