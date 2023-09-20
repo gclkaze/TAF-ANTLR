@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type IndexValue struct {
@@ -52,19 +52,19 @@ func (ind *IndexStack) Clear() {
 }
 
 func (ind IndexStack) Eval() string {
-	log.Println("\n\n===========================================>")
-	log.Println("Initially ", ind.varExpression)
-	log.Println("Rep ", ind.evalVarExpression)
-	log.Println("===========================================>")
+	log.Debug("\n\n===========================================>")
+	log.Debug("Initially ", ind.varExpression)
+	log.Debug("Rep ", ind.evalVarExpression)
+	log.Debug("===========================================>")
 
 	s := ind.EvalExpr(ind.varExpression)
-	fmt.Printf("s: %v\n", s)
+	log.Debug("s: ", s)
 	return s
 }
 
 func (ind IndexStack) EvalExpr(expr string) string {
 	if len(ind.stack) == 0 {
-		log.Println("stack is empty")
+		log.Debug("stack is empty")
 		return expr
 	}
 	rep := expr

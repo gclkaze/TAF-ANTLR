@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
 	"tafexpr/parser"
 	"tafexpr/variablecontext"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type TAFArgumentListenerError int
@@ -30,9 +31,11 @@ type TAFArgumentListener struct {
 
 func (l *TAFArgumentListener) push(i float64) {
 	l.stack = append(l.stack, i)
-	//log.Println("pushed ", l.stack)
+	log.Debug("pushed ", l.stack)
 
-	l.IsFloat = !isIntegral(i)
+	if !l.IsFloat {
+		l.IsFloat = !isIntegral(i)
+	}
 }
 
 func isIntegral(val float64) bool {
@@ -52,7 +55,7 @@ func (l *TAFArgumentListener) pop() any {
 
 	// Remove the last element from the stack.
 	l.stack = l.stack[:len(l.stack)-1]
-	//log.Println("popped ", l.stack)
+	log.Debug("popped ", l.stack)
 	if l.IsFloat {
 		return result
 	}
@@ -78,7 +81,7 @@ func (l *TAFArgumentListener) popFloat() float64 {
 
 	const prec = 200
 	a := new(big.Float).SetPrec(prec).SetFloat64(result)
-	//fmt.Printf("a.String(): %v\n", a.String())
+	log.Debug("a.String(): ", a.String())
 	result, _ = strconv.ParseFloat(a.String(), 64)
 	return result
 }
@@ -142,9 +145,6 @@ func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
 		switch c.GetOp().GetTokenType() {
 		case parser.TafexprParserADD:
 			v := leftFloat + rightFloat
-			/*			fmt.Printf("leftFloat: %v\n", leftFloat)
-						fmt.Printf("rightFloat: %v\n", rightFloat)
-						fmt.Printf("v: %v\n", v)*/
 			l.push(v)
 			break
 		case parser.TafexprParserSUB:
@@ -152,7 +152,7 @@ func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
 			l.push(v)
 			break
 		default:
-			panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+			log.Error(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
 			break
 		}
 
@@ -170,7 +170,7 @@ func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
 			l.push(float64(v))
 			break
 		default:
-			panic(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
+			log.Error(fmt.Sprintf("unexpected op: %s", c.GetOp().GetText()))
 		}
 	}
 }
@@ -178,6 +178,7 @@ func (l *TAFArgumentListener) ExitAddSub(c *parser.AddSubContext) {
 func (l *TAFArgumentListener) ExitNumber(c *parser.NumberContext) {
 	i, err := strconv.Atoi(c.GetText())
 	if err != nil {
+		log.Error(err.Error())
 		panic(err.Error())
 	}
 
@@ -185,14 +186,13 @@ func (l *TAFArgumentListener) ExitNumber(c *parser.NumberContext) {
 }
 
 func (l *TAFArgumentListener) ExitDoubleValue(c *parser.DoubleValueContext) {
-	//fmt.Printf("c.GetText(): %v\n", c.GetText())
 	i, err := strconv.ParseFloat(c.GetText(), -1)
 	if err != nil {
+		log.Error(err.Error())
 		panic(err.Error())
 	}
 
 	l.IsFloat = true
-	//log.Println(i)
 
 	l.push(i)
 }
@@ -202,23 +202,23 @@ func (l *TAFArgumentListener) EnterTaf_expression(c *parser.Taf_expressionContex
 }
 
 func (l *TAFArgumentListener) ExitTaf_expression(c *parser.Taf_expressionContext) {
-	log.Println("ExitTaf_expression" + c.GetText())
+	log.Debug("ExitTaf_expression" + c.GetText())
 	l.Index.Clear()
 }
 
 func (l *TAFArgumentListener) ExitNumberValue(c *parser.NumberContext) {
-	log.Println("ExitNumberValue " + c.GetText())
+	log.Debug("ExitNumberValue " + c.GetText())
 }
 
 func (l *TAFArgumentListener) EnterVar_expression(c *parser.Var_expressionContext) {
 	varExpression := c.GetText()
-	log.Println("EnterVar_expression " + varExpression)
+	log.Debug("EnterVar_expression " + varExpression)
 
 	l.Index.SetExpression(varExpression)
 }
 
 func (l *TAFArgumentListener) EnterHandleVarExpression(c *parser.HandleVarExpressionContext) {
-	log.Println("EnterHandleVarExpression")
+	log.Debug("EnterHandleVarExpression")
 	if l.Scope == 0 {
 		l.CurrentPath = c.GetText()
 	}
@@ -226,13 +226,13 @@ func (l *TAFArgumentListener) EnterHandleVarExpression(c *parser.HandleVarExpres
 }
 
 func (l *TAFArgumentListener) ExitHandleVarExpression(c *parser.HandleVarExpressionContext) {
-	log.Println("ExitHandleVarExpression")
+	log.Debug("ExitHandleVarExpression")
 	l.Scope--
 	if l.Scope == 0 && !l.Index.IsEmpty() {
-		fmt.Printf("l.Index: %v\n", l.Index)
+		log.Debug("l.Index:", l.Index)
 		//we need to store index value to the stack
-		log.Println("==============================================OUT OF SCOPE for ==>" + c.GetText())
-		fmt.Printf("l.stack: %v\n", l.stack)
+		log.Debug("==============================================OUT OF SCOPE for ==>" + c.GetText())
+		log.Debug("l.stack: ", l.stack)
 		l.Index.Clear()
 
 		return
@@ -246,7 +246,7 @@ func (l *TAFArgumentListener) ExtractPath(t string, myVar string) (path string) 
 
 // ExitVar_expression is called when exiting the var_expression production.
 func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext) {
-	log.Println("Scope ", l.Scope, "ExitVar_expression: "+c.GetText())
+	log.Debug("Scope ", l.Scope, "ExitVar_expression: "+c.GetText())
 
 	if l.VariableContext == nil {
 		//no variable context, runtime eror
@@ -270,7 +270,7 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 	if l.Scope > 1 {
 		ex := c.GetText()
 		//we have a subexpression and its value, we need to push that
-		fmt.Printf("l.stack: %v\n", l.stack)
+		log.Debug("l.stack:", l.stack)
 		path := l.ExtractPath(ex, varName)
 		if ex == varName {
 			v := l.VariableContext.GetVariableIntValue(varName)
@@ -308,12 +308,12 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 }
 
 func (l *TAFArgumentListener) EnterIndexExpression(c *parser.IndexExpressionContext) {
-	log.Println("Enter Index Expression")
+	log.Debug("Enter Index Expression")
 	//l.CurrentPath = c.GetText()
 }
 
 func (l *TAFArgumentListener) ExitIndexExpression(c *parser.IndexExpressionContext) {
-	log.Println(l.Scope, " Exit Index Expression ")
+	log.Debug(l.Scope, " Exit Index Expression ")
 	p := c.GetText()
 
 	index := l.pop()
@@ -326,17 +326,13 @@ func (l *TAFArgumentListener) ExitIndexExpression(c *parser.IndexExpressionConte
 }
 
 func (l *TAFArgumentListener) EnterVarPath(c *parser.VarPathContext) {
-	/*	log.Println("EnterVarPath " + c.GetText())
-		l.CurrentPath = c.GetText()*/
 }
 
 func (l *TAFArgumentListener) ExitVarPath(c *parser.VarPathContext) {
-	log.Println("ExitVarPath " + c.GetText())
-	//l.CurrentPath = c.GetText()
-	//fmt.Printf("l.CurrentPath: %v\n", l.CurrentPath)
+	log.Debug("ExitVarPath " + c.GetText())
 }
 
 // ExitParenthesisExpression is called when exiting the parenthesisExpression production.
 func (l *TAFArgumentListener) ExitParenthesisExpression(c *parser.ParenthesisExpressionContext) {
-	log.Println("ExitParenthesisExpression" + c.GetText())
+	log.Debug("ExitParenthesisExpression" + c.GetText())
 }
