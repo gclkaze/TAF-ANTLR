@@ -16,7 +16,7 @@ func SetupParser() *TAFArgumentParser {
 const float64EqualityThreshold = 1e-4
 
 func almostEqual(a, b float64) bool {
-	fmt.Printf("a: %v\n", a)
+	fmt.Printf("a: %v\n ", a)
 	fmt.Printf("b: %v\n", b)
 	return math.Abs(a-b) <= float64EqualityThreshold
 }
