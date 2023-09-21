@@ -19,7 +19,8 @@ type TAFArgumentParser struct {
 	lexerErrors  *TAFArgumentErrorListener
 	parserErrors *TAFArgumentErrorListener
 
-	Debug bool
+	Debug   bool
+	IsFloat bool
 }
 
 func (ap *TAFArgumentParser) clearErrors() {
@@ -35,6 +36,7 @@ func (ap *TAFArgumentParser) CanParse(arg string) bool {
 
 	ap.clearErrors()
 
+	ap.IsFloat = false
 	ap.DoubleValue = -1
 	ap.IntValue = -1
 	ap.OnError = true
@@ -91,6 +93,7 @@ func (ap *TAFArgumentParser) Parse(arg string) bool {
 
 	ap.clearErrors()
 
+	ap.IsFloat = false
 	ap.DoubleValue = -1
 	ap.IntValue = -1
 	ap.OnError = true
@@ -128,6 +131,7 @@ func (ap *TAFArgumentParser) Parse(arg string) bool {
 
 	if l.IsFloat {
 		ap.DoubleValue = l.popFloat()
+		ap.IsFloat = true
 
 	} else {
 		ap.IntValue = l.pop().(int)
