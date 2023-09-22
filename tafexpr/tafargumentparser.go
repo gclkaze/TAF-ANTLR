@@ -18,6 +18,7 @@ type TAFArgumentParser struct {
 
 	lexerErrors  *TAFArgumentErrorListener
 	parserErrors *TAFArgumentErrorListener
+	ErrorMsgs    []TAFParserArgumentError
 
 	Debug   bool
 	IsFloat bool
@@ -126,6 +127,12 @@ func (ap *TAFArgumentParser) Parse(arg string) bool {
 
 	if len(ap.parserErrors.Errors) != 0 {
 		ap.OnError = true
+		return false
+	}
+
+	if l.OnError {
+		ap.OnError = true
+		ap.ErrorMsgs = l.ErrorMsgs
 		return false
 	}
 

@@ -1,6 +1,7 @@
 package tafexpr
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -15,6 +16,8 @@ type TAFArgumentListenerError int
 
 const (
 	DIVISION_BY_ZERO TAFArgumentListenerError = iota
+	UNDECLARED_VARIABLE
+	RUNTIME_ERROR
 )
 
 type TAFArgumentListener struct {
@@ -22,12 +25,17 @@ type TAFArgumentListener struct {
 	stack           []float64
 	IsFloat         bool
 	OnError         bool
-	Error           TAFArgumentListenerError
+	ErrorMsgs       []TAFParserArgumentError
 	VariableContext variablecontext.IVariableContext
 	CurrentPath     string
 	Scope           int
 	Index           IndexStack
 	Debug           bool
+}
+
+type TAFParserArgumentError struct {
+	Msg  error
+	Type TAFArgumentListenerError
 }
 
 func (l *TAFArgumentListener) push(i float64) {
@@ -114,7 +122,7 @@ func (l *TAFArgumentListener) ExitMulDiv(c *parser.MulDivContext) {
 		rightFloat := right.(float64)
 		if rightFloat == 0 {
 			l.OnError = true
-			l.Error = DIVISION_BY_ZERO
+			l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: errors.New("Division by zero"), Type: DIVISION_BY_ZERO})
 			return
 		}
 		leftFloat := left.(float64)
@@ -141,7 +149,7 @@ func (l *TAFArgumentListener) ExitMulDiv(c *parser.MulDivContext) {
 		rightInt := right.(int)
 		if rightInt == 0 {
 			l.OnError = true
-			l.Error = DIVISION_BY_ZERO
+			l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: errors.New("Division by zero"), Type: DIVISION_BY_ZERO})
 			return
 		}
 
@@ -298,19 +306,30 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 
 	if l.VariableContext == nil {
 		//no variable context, runtime eror
+		l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: errors.New("The Variable Context is not allocated."), Type: RUNTIME_ERROR})
+		l.OnError = true
 		return
 	}
 
 	if c == nil {
 		//runtime error here??
+		l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: errors.New("The Variable Context Expression is not allocated."), Type: RUNTIME_ERROR})
+		l.OnError = true
 		return
 	}
 	if c.Var_path() == nil {
 		if c.VARIABLE_NAME() == nil {
 			//runtime error here??
+			l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: errors.New("The Variable name is empty."), Type: RUNTIME_ERROR})
+			l.OnError = true
 			return
 		}
-		v := l.VariableContext.GetVariableIntValue(c.VARIABLE_NAME().GetText())
+		v, ok := l.VariableContext.GetVariableIntValue(c.VARIABLE_NAME().GetText())
+		if ok != nil {
+			l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: ok, Type: RUNTIME_ERROR})
+			l.OnError = true
+			return
+		}
 		l.push(v)
 		return
 	}
@@ -321,7 +340,13 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 		log.Debug("l.stack:", l.stack)
 		path := l.ExtractPath(ex, varName)
 		if ex == varName {
-			v := l.VariableContext.GetVariableIntValue(varName)
+			v, ok := l.VariableContext.GetVariableIntValue(varName)
+			if ok != nil {
+				l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: ok, Type: RUNTIME_ERROR})
+				l.OnError = true
+				return
+			}
+
 			l.Index.Push(ex, int(v))
 			l.push(v)
 			return
@@ -330,13 +355,25 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 		evalExpr := l.Index.EvalExpr(ex)
 		path = l.ExtractPath(evalExpr, varName)
 		if ex == varName {
-			v := l.VariableContext.GetVariableIntValue(varName)
+			v, ok := l.VariableContext.GetVariableIntValue(varName)
+			if ok != nil {
+				l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: ok, Type: RUNTIME_ERROR})
+				l.OnError = true
+				return
+			}
+
 			l.Index.Push(ex, int(v))
 			l.push(v)
 			return
 		}
 
-		v := l.VariableContext.EvaluateJSONVariableIntValue(varName, path)
+		v, ok := l.VariableContext.EvaluateJSONVariableIntValue(varName, path)
+		if ok != nil {
+			l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: ok, Type: RUNTIME_ERROR})
+			l.OnError = true
+			return
+		}
+
 		l.Index.Push(ex, int(v))
 		l.push(v)
 		return
@@ -344,13 +381,24 @@ func (l *TAFArgumentListener) ExitVar_expression(c *parser.Var_expressionContext
 
 	expr := l.Index.Eval()
 	if expr == varName {
-		v := l.VariableContext.GetVariableIntValue(varName)
+		v, ok := l.VariableContext.GetVariableIntValue(varName)
+		if ok != nil {
+			l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: ok, Type: RUNTIME_ERROR})
+			l.OnError = true
+			return
+		}
 		l.push(v)
 		return
 	}
 
 	path := l.ExtractPath(expr, varName)
-	v := l.VariableContext.EvaluateJSONVariableIntValue(varName, path)
+	v, ok := l.VariableContext.EvaluateJSONVariableIntValue(varName, path)
+	if ok != nil {
+		l.ErrorMsgs = append(l.ErrorMsgs, TAFParserArgumentError{Msg: ok, Type: RUNTIME_ERROR})
+		l.OnError = true
+		return
+	}
+
 	l.push(v)
 	return
 }

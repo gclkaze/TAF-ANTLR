@@ -18,15 +18,15 @@ func (vc *MockVariableContext) Init(isVerbose bool) {
 	vc.variableMap = map[string]float64{}
 }
 
-func (vc *MockVariableContext) GetVariableIntValue(s string) float64 {
+func (vc *MockVariableContext) GetVariableIntValue(s string) (res float64, err error) {
 	val, ok := vc.variableMap[s]
 	if !ok {
 		log.Println("Didn't find element at " + s)
 		panic("Didn't find element at " + s)
 	}
-	return val
+	return val, nil
 }
 
-func (vc *MockVariableContext) EvaluateJSONVariableIntValue(s string, path string) float64 {
+func (vc *MockVariableContext) EvaluateJSONVariableIntValue(s string, path string) (res float64, err error) {
 	return vc.GetVariableIntValue(s + "." + path)
 }

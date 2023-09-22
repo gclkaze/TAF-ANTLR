@@ -23,6 +23,15 @@ func SetupMockVariableContext() variablecontext.IVariableContext {
 	var context variablecontext.IVariableContext = v
 	return context
 }
+
+func SetupNilVariableContext() variablecontext.IVariableContext {
+	v := &variablecontext.NilVariableContext{}
+	v.Init(true)
+
+	var context variablecontext.IVariableContext = v
+	return context
+}
+
 func TestVariableDeclaration(t *testing.T) {
 	p := SetupParser()
 	p.VariableContext = SetupVariableContext()

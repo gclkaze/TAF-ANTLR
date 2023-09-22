@@ -8,12 +8,12 @@ type VariableContext struct {
 func (vc *VariableContext) Init(isVerbose bool) {
 }
 
-func (vc *VariableContext) GetVariableIntValue(s string) float64 {
+func (vc *VariableContext) GetVariableIntValue(s string) (res float64, ok error) {
 	//log.Println(s, "=>", 1)
-	return 1
+	return 1, nil
 }
 
-func (vc *VariableContext) EvaluateJSONVariableIntValue(s string, path string) float64 {
+func (vc *VariableContext) EvaluateJSONVariableIntValue(s string, path string) (res float64, ok error) {
 	//log.Println(s, path, "=>", 2)
-	return 2
+	return 2, nil
 }
